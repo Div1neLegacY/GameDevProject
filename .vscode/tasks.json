@@ -6,7 +6,14 @@
             "type": "shell",
             "windows":
             {
-                "command": "sh build.sh"
+                "command": "sh",
+                "args": ["build.sh"],
+                "options": {
+                    "shell": {
+                        "executable": "E:\\Program Files\\Git\\bin\\bash.exe",
+                        "args": ["-c"]
+                    }
+                }
             },
             "linux":
             {

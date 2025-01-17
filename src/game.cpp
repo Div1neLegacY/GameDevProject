@@ -92,87 +92,115 @@ IRect get_solid_rect(Solid solid)
   return {solid.pos - sprite.size / 2, sprite.size};
 }
 
-void update_level(float dt)
+void static update_player(float dt, bool enabledFriction, bool enabledGravity, bool enabledGrounded)
 {
-  if(just_pressed(PAUSE))
+  // Update Player
+  Player& player = gameState->player;
+  player.prevPos = player.pos;
+  player.animationState = PLAYER_ANIM_IDLE;
+
+  static Vec2 remainder = {};
+  static bool grounded = enabledGrounded;
+  constexpr float runSpeed = 1.5f;
+  constexpr float runAcceleration = 10.0f;
+  constexpr float runReduce = 22.0f; 
+  constexpr float flyReduce = 12.0f;    
+  constexpr float gravity = 13.0f;
+  constexpr float fallSpeed = 3.6f;
+  constexpr float jumpSpeed = -3.0f;
+
+  // Facing the Player in the right direction
+  if(player.speed.x > 0)
   {
-    gameState->state = GAME_STATE_MAIN_MENU;
+    player.renderOptions = 0;
+  }
+  if(player.speed.x < 0)
+  {
+    player.renderOptions = RENDER_OPTION_FLIP_X;
   }
 
-  // Update Player
+  // Jump
+  if(just_pressed(JUMP) && grounded)
   {
-    Player& player = gameState->player;
-    player.prevPos = player.pos;
-    player.animationState = PLAYER_ANIM_IDLE;
+    player.speed.y = jumpSpeed;
+    player.speed.x += player.solidSpeed.x;
+    player.speed.y += player.solidSpeed.y;
+    play_sound("jump");
+    grounded = false;
+  }
 
-    static Vec2 remainder = {};
-    static bool grounded = false;
-    constexpr float runSpeed = 2.0f;
-    constexpr float runAcceleration = 10.0f;
-    constexpr float runReduce = 22.0f; 
-    constexpr float flyReduce = 12.0f;    
-    constexpr float gravity = 13.0f;
-    constexpr float fallSpeed = 3.6f;
-    constexpr float jumpSpeed = -3.0f;
+  if(!grounded)
+  {
+    player.animationState = PLAYER_ANIM_JUMP;
+  }
 
-    // Facing the Player in the right direction
-    if(player.speed.x > 0)
+  if(is_down(MOVE_LEFT))
+  {
+    if(grounded)
     {
-      player.renderOptions = 0;
-    }
-    if(player.speed.x < 0)
-    {
-      player.renderOptions = RENDER_OPTION_FLIP_X;
+      player.animationState = PLAYER_ANIM_RUN;
     }
 
-    // Jump
-    if(just_pressed(JUMP) && grounded)
+    float mult = 1.0f;
+    if(player.speed.x > 0.0f)
     {
-      player.speed.y = jumpSpeed;
-      player.speed.x += player.solidSpeed.x;
-      player.speed.y += player.solidSpeed.y;
-      play_sound("jump");
-      grounded = false;
+      mult = 3.0f;
+    }
+    player.runAnimTime += dt;
+    player.speed.x = approach(player.speed.x, -runSpeed, runAcceleration * mult * dt);
+  }
+
+  if(is_down(MOVE_RIGHT))
+  {
+    if(grounded)
+    {
+      player.animationState = PLAYER_ANIM_RUN;
     }
 
-    if(!grounded)
+    float mult = 1.0f;
+    if(player.speed.x < 0.0f)
     {
-      player.animationState = PLAYER_ANIM_JUMP;
+      mult = 3.0f;
+    }
+    player.runAnimTime += dt;
+    player.speed.x = approach(player.speed.x, runSpeed, runAcceleration * mult * dt);
+  }
+
+  if(is_down(MOVE_UP))
+  {
+    if(grounded)
+    {
+      player.animationState = PLAYER_ANIM_RUN;
     }
 
-    if(is_down(MOVE_LEFT))
+    float mult = 1.0f;
+    if(player.speed.y < 0.0f)
     {
-      if(grounded)
-      {
-        player.animationState = PLAYER_ANIM_RUN;
-      }
+      mult = 3.0f;
+    }
+    player.runAnimTime += dt;
+    player.speed.y = approach(player.speed.y, -runSpeed, runAcceleration * mult * dt);
+  }
 
-      float mult = 1.0f;
-      if(player.speed.x > 0.0f)
-      {
-        mult = 3.0f;
-      }
-      player.runAnimTime += dt;
-      player.speed.x = approach(player.speed.x, -runSpeed, runAcceleration * mult * dt);
+  if(is_down(MOVE_DOWN))
+  {
+    if(grounded)
+    {
+      player.animationState = PLAYER_ANIM_RUN;
     }
 
-    if(is_down(MOVE_RIGHT))
+    float mult = 1.0f;
+    if(player.speed.y < 0.0f)
     {
-      if(grounded)
-      {
-        player.animationState = PLAYER_ANIM_RUN;
-      }
-
-      float mult = 1.0f;
-      if(player.speed.x < 0.0f)
-      {
-        mult = 3.0f;
-      }
-      player.runAnimTime += dt;
-      player.speed.x = approach(player.speed.x, runSpeed, runAcceleration * mult * dt);
+      mult = 3.0f;
     }
+    player.runAnimTime += dt;
+    player.speed.y = approach(player.speed.y, runSpeed, runAcceleration * mult * dt);
+  }
 
-    // Friction
+  // Friction
+  if (enabledFriction)
+  {
     if(!is_down(MOVE_LEFT) &&
       !is_down(MOVE_RIGHT))
     {
@@ -186,7 +214,17 @@ void update_level(float dt)
       }
     }
 
-    // Gravity
+    if(!is_down(MOVE_UP) &&
+      !is_down(MOVE_DOWN))
+    {
+      // Add Friction to Y axis for non-platformers
+      player.speed.y = approach(player.speed.y, 0, runReduce * dt);
+    }
+  }
+
+  // Gravity
+  if (enabledGravity)
+  {
     player.speed.y = approach(player.speed.y, fallSpeed, gravity * dt);
 
 
@@ -194,312 +232,512 @@ void update_level(float dt)
     {
       player.pos = {};
     }
+  }
+
+  // Move X
+  {
+    IRect playerRect = get_player_rect();
+
+    remainder.x += player.speed.x;
+    int moveX = round(remainder.x);
+    if(moveX != 0)
+    {
+      remainder.x -= moveX;
+      int moveSign = sign(moveX);
+      bool collisionHappened = false;
+
+      // Move the player in Y until collision or moveY is exausted
+      auto movePlayerX = [&]
+      {
+        while(moveX)
+        {
+          playerRect.pos.x += moveSign;
+
+          // Update camera to follow player
+          renderData->gameCamera.position.x = player.pos.x;
+
+          // Test collision against Solids
+          {
+            for(int solidIdx = 0; solidIdx < gameState->solidsLevel1.count; solidIdx++)
+            {
+              Solid& solid = gameState->solidsLevel1[solidIdx];
+              IRect solidRect = get_solid_rect(solid);
+
+              if(rect_collision(playerRect, solidRect))
+              {
+                player.speed.x = 0;
+                return;
+              }
+            }
+          }
+
+          // Loop through local Tiles
+          IVec2 playerGridPos = get_grid_pos(player.pos);
+          for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+          {
+            for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
+            {
+              Tile* tile = get_tile(x, y);
+
+              if(!tile || !tile->isVisible)
+              {
+                continue;
+              }
+
+              IRect tileRect = get_tile_rect(x, y);
+              if(rect_collision(playerRect, tileRect))
+              {
+                player.speed.x = 0;
+                return;
+              }
+            }
+          }
+
+          // Move the Player
+          player.pos.x += moveSign;
+          moveX -= moveSign;
+        }
+      };
+      movePlayerX();
+    }
+  }
+
+  // Move Y
+  {
+    IRect playerRect = get_player_rect();
+
+    remainder.y += player.speed.y;
+    int moveY = round(remainder.y);
+    if(moveY != 0)
+    {
+      remainder.y -= moveY;
+      int moveSign = sign(moveY);
+      bool collisionHappened = false;
+
+      // Move the player in Y until collision or moveY is exausted
+      auto movePlayerY = [&]
+      {
+        while(moveY)
+        {
+          playerRect.pos.y += moveSign;
+
+          // Update camera to follow player
+          renderData->gameCamera.position.y = -player.pos.y;
+
+          // Test collision against Solids
+          {
+            for(int solidIdx = 0; solidIdx < gameState->solidsLevel1.count; solidIdx++)
+            {
+              Solid& solid = gameState->solidsLevel1[solidIdx];
+              IRect solidRect = get_solid_rect(solid);
+
+              if(rect_collision(playerRect, solidRect))
+              {
+                // Moving down/falling
+                /* if(player.speed.y > 0.0f)
+                {
+                  grounded = true;
+                } */
+
+                player.speed.y = 0;
+                return;
+              }
+            }
+          }
+
+          // Loop through local Tiles
+          IVec2 playerGridPos = get_grid_pos(player.pos);
+          for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+          {
+            for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
+            {
+              Tile* tile = get_tile(x, y);
+
+              if(!tile || !tile->isVisible)
+              {
+                continue;
+              }
+
+              IRect tileRect = get_tile_rect(x, y);
+              if(rect_collision(playerRect, tileRect))
+              {
+                // Moving down/falling
+                /* if(player.speed.y > 0.0f)
+                {
+                  grounded = true;
+                } */
+
+                player.speed.y = 0;
+                return;
+              }
+            }
+          }
+
+          // Move the Player
+          player.pos.y += moveSign;
+          moveY -= moveSign;
+        }
+      };
+      movePlayerY();
+    }
+  }
+}
+
+void static update_solids_level_1(float dt)
+{
+  Player& player = gameState->player;
+  player.solidSpeed = {};
+
+  for(int solidIdx = 0; solidIdx < gameState->solidsLevel1.count; solidIdx++)
+  {
+    Solid& solid = gameState->solidsLevel1[solidIdx];
+    solid.prevPos = solid.pos;
+
+    IRect solidRect = get_solid_rect(solid);
+    solidRect.pos -= 1;
+    solidRect.size += 2;
+
+    int nextKeyframeIdx = solid.keyframeIdx + 1;
+    nextKeyframeIdx %= solid.keyframes.count;
 
     // Move X
     {
-      IRect playerRect = get_player_rect();
-
-      remainder.x += player.speed.x;
-      int moveX = round(remainder.x);
+      solid.remainder.x += solid.speed.x * dt;
+      int moveX = round(solid.remainder.x);
       if(moveX != 0)
       {
-        remainder.x -= moveX;
-        int moveSign = sign(moveX);
-        bool collisionHappened = false;
+        solid.remainder.x -= moveX;
+        int moveSign = sign(solid.keyframes[nextKeyframeIdx].x - 
+                            solid.keyframes[solid.keyframeIdx].x);
 
         // Move the player in Y until collision or moveY is exausted
-        auto movePlayerX = [&]
+        auto moveSolidX = [&]
         {
           while(moveX)
           {
-            playerRect.pos.x += moveSign;
+            IRect playerRect = get_player_rect();
+            bool standingOnTop = 
+              playerRect.pos.y - 1 + playerRect.size.y == solidRect.pos.y;
 
-            // Test collision against Solids
+            solidRect.pos.x += moveSign;
+
+            // Collision happend on left or right, push the player
+            bool tileCollision = false;
+            if(rect_collision(playerRect, solidRect))
             {
-              for(int solidIdx = 0; solidIdx < gameState->solids.count; solidIdx++)
-              {
-                Solid& solid = gameState->solids[solidIdx];
-                IRect solidRect = get_solid_rect(solid);
+              // Move the player rect
+              playerRect.pos.x += moveSign;
+              player.solidSpeed.x = solid.speed.x * (float)moveSign / 20.0f;
 
-                if(rect_collision(playerRect, solidRect))
+              // Check for collision, if yes, destroy the player
+              // Loop through local Tiles
+              IVec2 playerGridPos = get_grid_pos(player.pos);
+              for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+              {
+                for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
                 {
-                  player.speed.x = 0;
-                  return;
+                  Tile* tile = get_tile(x, y);
+
+                  if(!tile || !tile->isVisible)
+                  {
+                    continue;
+                  }
+
+                  IRect tileRect = get_tile_rect(x, y);
+                  if(rect_collision(playerRect, tileRect))
+                  {
+                    tileCollision = true;
+
+                    if(!standingOnTop)
+                    {
+                      // Death
+                    player.pos = {WORLD_WIDTH / 2,  WORLD_HEIGHT - 24};
+                    }
+                  }
                 }
+              }
+
+              if(!tileCollision)
+              {
+                // Actually move the player
+                player.pos.x += moveSign;
               }
             }
 
-            // Loop through local Tiles
-            IVec2 playerGridPos = get_grid_pos(player.pos);
-            for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+            // Move the Solid
+            solid.pos.x += moveSign;
+            moveX -= 1;
+
+            if(solid.pos.x == solid.keyframes[nextKeyframeIdx].x)
             {
-              for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
-              {
-                Tile* tile = get_tile(x, y);
-
-                if(!tile || !tile->isVisible)
-                {
-                  continue;
-                }
-
-                IRect tileRect = get_tile_rect(x, y);
-                if(rect_collision(playerRect, tileRect))
-                {
-                  player.speed.x = 0;
-                  return;
-                }
-              }
+              solid.keyframeIdx = nextKeyframeIdx;
+              nextKeyframeIdx++;
+              nextKeyframeIdx %= solid.keyframes.count;
             }
-
-            // Move the Player
-            player.pos.x += moveSign;
-            moveX -= moveSign;
           }
         };
-        movePlayerX();
+        moveSolidX();
       }
     }
 
     // Move Y
     {
-      IRect playerRect = get_player_rect();
-
-      remainder.y += player.speed.y;
-      int moveY = round(remainder.y);
+      solid.remainder.y += solid.speed.y * dt;
+      int moveY = round(solid.remainder.y);
       if(moveY != 0)
       {
-        remainder.y -= moveY;
-        int moveSign = sign(moveY);
-        bool collisionHappened = false;
+        solid.remainder.y -= moveY;
+        int moveSign = sign(solid.keyframes[nextKeyframeIdx].y - 
+                            solid.keyframes[solid.keyframeIdx].y);
 
         // Move the player in Y until collision or moveY is exausted
-        auto movePlayerY = [&]
+        auto moveSolidY = [&]
         {
           while(moveY)
           {
-            playerRect.pos.y += moveSign;
+            IRect playerRect = get_player_rect();
+            solidRect.pos.x += moveSign;
 
-            // Test collision against Solids
+            // Collision happend on bottom, push the player
+            if(rect_collision(playerRect, solidRect))
             {
-              for(int solidIdx = 0; solidIdx < gameState->solids.count; solidIdx++)
-              {
-                Solid& solid = gameState->solids[solidIdx];
-                IRect solidRect = get_solid_rect(solid);
+              // Move the player
+              player.pos.y += moveSign;
+              player.solidSpeed.y = solid.speed.y * (float)moveSign / 40.0f;
 
-                if(rect_collision(playerRect, solidRect))
+              // Check for collision, if yes, destroy the player
+              // Loop through local Tiles
+              IVec2 playerGridPos = get_grid_pos(player.pos);
+              for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+              {
+                for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
                 {
-                  // Moving down/falling
-                  if(player.speed.y > 0.0f)
+                  Tile* tile = get_tile(x, y);
+
+                  if(!tile || !tile->isVisible)
                   {
-                    grounded = true;
+                    continue;
                   }
 
-                  player.speed.y = 0;
-                  return;
+                  IRect tileRect = get_tile_rect(x, y);
+                  if(rect_collision(playerRect, tileRect))
+                  {
+                    player.pos = {WORLD_WIDTH / 2,  WORLD_HEIGHT - 24};
+                  }
                 }
               }
             }
 
-            // Loop through local Tiles
-            IVec2 playerGridPos = get_grid_pos(player.pos);
-            for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+            // Move the Solid
+            solid.pos.y += moveSign;
+            moveY -= 1;
+
+            if(solid.pos.y == solid.keyframes[nextKeyframeIdx].y)
             {
-              for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
-              {
-                Tile* tile = get_tile(x, y);
-
-                if(!tile || !tile->isVisible)
-                {
-                  continue;
-                }
-
-                IRect tileRect = get_tile_rect(x, y);
-                if(rect_collision(playerRect, tileRect))
-                {
-                  // Moving down/falling
-                  if(player.speed.y > 0.0f)
-                  {
-                    grounded = true;
-                  }
-
-                  player.speed.y = 0;
-                  return;
-                }
-              }
+              solid.keyframeIdx = nextKeyframeIdx;
+              nextKeyframeIdx++;
+              nextKeyframeIdx %= solid.keyframes.count;
             }
-
-            // Move the Player
-            player.pos.y += moveSign;
-            moveY -= moveSign;
           }
         };
-        movePlayerY();
+        moveSolidY();
       }
     }
   }
+}
+
+void static update_solids_level_2(float dt)
+{
+  Player& player = gameState->player;
+  player.solidSpeed = {};
+
+  for(int solidIdx = 0; solidIdx < gameState->solidsLevel2.count; solidIdx++)
+  {
+    Solid& solid = gameState->solidsLevel2[solidIdx];
+    solid.prevPos = solid.pos;
+
+    IRect solidRect = get_solid_rect(solid);
+    solidRect.pos -= 1;
+    solidRect.size += 2;
+
+    int nextKeyframeIdx = solid.keyframeIdx + 1;
+    nextKeyframeIdx %= solid.keyframes.count;
+
+    // Move X
+    {
+      solid.remainder.x += solid.speed.x * dt;
+      int moveX = round(solid.remainder.x);
+      if(moveX != 0)
+      {
+        solid.remainder.x -= moveX;
+        int moveSign = sign(solid.keyframes[nextKeyframeIdx].x - 
+                            solid.keyframes[solid.keyframeIdx].x);
+
+        // Move the player in Y until collision or moveY is exausted
+        auto moveSolidX = [&]
+        {
+          while(moveX)
+          {
+            IRect playerRect = get_player_rect();
+            bool standingOnTop = 
+              playerRect.pos.y - 1 + playerRect.size.y == solidRect.pos.y;
+
+            solidRect.pos.x += moveSign;
+
+            // Collision happend on left or right, push the player
+            bool tileCollision = false;
+            if(rect_collision(playerRect, solidRect))
+            {
+              // Move the player rect
+              playerRect.pos.x += moveSign;
+              player.solidSpeed.x = solid.speed.x * (float)moveSign / 20.0f;
+
+              // Check for collision, if yes, destroy the player
+              // Loop through local Tiles
+              IVec2 playerGridPos = get_grid_pos(player.pos);
+              for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+              {
+                for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
+                {
+                  Tile* tile = get_tile(x, y);
+
+                  if(!tile || !tile->isVisible)
+                  {
+                    continue;
+                  }
+
+                  IRect tileRect = get_tile_rect(x, y);
+                  if(rect_collision(playerRect, tileRect))
+                  {
+                    tileCollision = true;
+
+                    if(!standingOnTop)
+                    {
+                      // Death
+                    player.pos = {WORLD_WIDTH / 2,  WORLD_HEIGHT - 24};
+                    }
+                  }
+                }
+              }
+
+              if(!tileCollision)
+              {
+                // Actually move the player
+                player.pos.x += moveSign;
+              }
+            }
+
+            // Move the Solid
+            solid.pos.x += moveSign;
+            moveX -= 1;
+
+            if(solid.pos.x == solid.keyframes[nextKeyframeIdx].x)
+            {
+              solid.keyframeIdx = nextKeyframeIdx;
+              nextKeyframeIdx++;
+              nextKeyframeIdx %= solid.keyframes.count;
+            }
+          }
+        };
+        moveSolidX();
+      }
+    }
+
+    // Move Y
+    {
+      solid.remainder.y += solid.speed.y * dt;
+      int moveY = round(solid.remainder.y);
+      if(moveY != 0)
+      {
+        solid.remainder.y -= moveY;
+        int moveSign = sign(solid.keyframes[nextKeyframeIdx].y - 
+                            solid.keyframes[solid.keyframeIdx].y);
+
+        // Move the player in Y until collision or moveY is exausted
+        auto moveSolidY = [&]
+        {
+          while(moveY)
+          {
+            IRect playerRect = get_player_rect();
+            solidRect.pos.x += moveSign;
+
+            // Collision happend on bottom, push the player
+            if(rect_collision(playerRect, solidRect))
+            {
+              // Move the player
+              player.pos.y += moveSign;
+              player.solidSpeed.y = solid.speed.y * (float)moveSign / 40.0f;
+
+              // Check for collision, if yes, destroy the player
+              // Loop through local Tiles
+              IVec2 playerGridPos = get_grid_pos(player.pos);
+              for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
+              {
+                for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
+                {
+                  Tile* tile = get_tile(x, y);
+
+                  if(!tile || !tile->isVisible)
+                  {
+                    continue;
+                  }
+
+                  IRect tileRect = get_tile_rect(x, y);
+                  if(rect_collision(playerRect, tileRect))
+                  {
+                    player.pos = {WORLD_WIDTH / 2,  WORLD_HEIGHT - 24};
+                  }
+                }
+              }
+            }
+
+            // Move the Solid
+            solid.pos.y += moveSign;
+            moveY -= 1;
+
+            if(solid.pos.y == solid.keyframes[nextKeyframeIdx].y)
+            {
+              solid.keyframeIdx = nextKeyframeIdx;
+              nextKeyframeIdx++;
+              nextKeyframeIdx %= solid.keyframes.count;
+            }
+          }
+        };
+        moveSolidY();
+      }
+    }
+  }
+}
+
+void static update_solids(float dt)
+{
+  if (gameState->state == GAME_STATE_IN_LEVEL_1)
+  {
+    update_solids_level_1(dt);
+  }
+  else if (gameState->state == GAME_STATE_IN_LEVEL_2)
+  {
+    update_solids_level_2(dt);
+  }
+}
+
+void update_level(float dt)
+{
+  if(just_pressed(PAUSE))
+  {
+    gameState->state = GAME_STATE_MAIN_MENU;
+  }
+
+  // Updates for the main player
+  update_player(dt, true, false, true);
+
+  // Update camera to follow player
+  Player& player = gameState->player;
+  renderData->gameCamera.position.x = player.pos.x;
+  renderData->gameCamera.position.y = -player.pos.y;
 
   // Update Solids
-  {
-    Player& player = gameState->player;
-    player.solidSpeed = {};
-
-    for(int solidIdx = 0; solidIdx < gameState->solids.count; solidIdx++)
-    {
-      Solid& solid = gameState->solids[solidIdx];
-      solid.prevPos = solid.pos;
-
-      IRect solidRect = get_solid_rect(solid);
-      solidRect.pos -= 1;
-      solidRect.size += 2;
-
-      int nextKeyframeIdx = solid.keyframeIdx + 1;
-      nextKeyframeIdx %= solid.keyframes.count;
-
-      // Move X
-      {
-        solid.remainder.x += solid.speed.x * dt;
-        int moveX = round(solid.remainder.x);
-        if(moveX != 0)
-        {
-          solid.remainder.x -= moveX;
-          int moveSign = sign(solid.keyframes[nextKeyframeIdx].x - 
-                              solid.keyframes[solid.keyframeIdx].x);
-
-          // Move the player in Y until collision or moveY is exausted
-          auto moveSolidX = [&]
-          {
-            while(moveX)
-            {
-              IRect playerRect = get_player_rect();
-              bool standingOnTop = 
-                playerRect.pos.y - 1 + playerRect.size.y == solidRect.pos.y;
-
-              solidRect.pos.x += moveSign;
-
-              // Collision happend on left or right, push the player
-              bool tileCollision = false;
-              if(rect_collision(playerRect, solidRect))
-              {
-                // Move the player rect
-                playerRect.pos.x += moveSign;
-                player.solidSpeed.x = solid.speed.x * (float)moveSign / 20.0f;
-
-                // Check for collision, if yes, destroy the player
-                // Loop through local Tiles
-                IVec2 playerGridPos = get_grid_pos(player.pos);
-                for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
-                {
-                  for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
-                  {
-                    Tile* tile = get_tile(x, y);
-
-                    if(!tile || !tile->isVisible)
-                    {
-                      continue;
-                    }
-
-                    IRect tileRect = get_tile_rect(x, y);
-                    if(rect_collision(playerRect, tileRect))
-                    {
-                      tileCollision = true;
-
-                      if(!standingOnTop)
-                      {
-                        // Death
-                      player.pos = {WORLD_WIDTH / 2,  WORLD_HEIGHT - 24};
-                      }
-                    }
-                  }
-                }
-
-                if(!tileCollision)
-                {
-                  // Actually move the player
-                  player.pos.x += moveSign;
-                }
-              }
-
-              // Move the Solid
-              solid.pos.x += moveSign;
-              moveX -= 1;
-
-              if(solid.pos.x == solid.keyframes[nextKeyframeIdx].x)
-              {
-                solid.keyframeIdx = nextKeyframeIdx;
-                nextKeyframeIdx++;
-                nextKeyframeIdx %= solid.keyframes.count;
-              }
-            }
-          };
-          moveSolidX();
-        }
-      }
-
-      // Move Y
-      {
-        solid.remainder.y += solid.speed.y * dt;
-        int moveY = round(solid.remainder.y);
-        if(moveY != 0)
-        {
-          solid.remainder.y -= moveY;
-          int moveSign = sign(solid.keyframes[nextKeyframeIdx].y - 
-                              solid.keyframes[solid.keyframeIdx].y);
-
-          // Move the player in Y until collision or moveY is exausted
-          auto moveSolidY = [&]
-          {
-            while(moveY)
-            {
-              IRect playerRect = get_player_rect();
-              solidRect.pos.x += moveSign;
-
-              // Collision happend on bottom, push the player
-              if(rect_collision(playerRect, solidRect))
-              {
-                // Move the player
-                player.pos.y += moveSign;
-                player.solidSpeed.y = solid.speed.y * (float)moveSign / 40.0f;
-
-                // Check for collision, if yes, destroy the player
-                // Loop through local Tiles
-                IVec2 playerGridPos = get_grid_pos(player.pos);
-                for(int x = playerGridPos.x - 1; x <= playerGridPos.x + 1; x++)
-                {
-                  for(int y = playerGridPos.y - 2; y <= playerGridPos.y + 2; y++)
-                  {
-                    Tile* tile = get_tile(x, y);
-
-                    if(!tile || !tile->isVisible)
-                    {
-                      continue;
-                    }
-
-                    IRect tileRect = get_tile_rect(x, y);
-                    if(rect_collision(playerRect, tileRect))
-                    {
-                      player.pos = {WORLD_WIDTH / 2,  WORLD_HEIGHT - 24};
-                    }
-                  }
-                }
-              }
-
-              // Move the Solid
-              solid.pos.y += moveSign;
-              moveY -= 1;
-
-              if(solid.pos.y == solid.keyframes[nextKeyframeIdx].y)
-              {
-                solid.keyframeIdx = nextKeyframeIdx;
-                nextKeyframeIdx++;
-                nextKeyframeIdx %= solid.keyframes.count;
-              }
-            }
-          };
-          moveSolidY();
-        }
-      }
-    }
-  }
+  update_solids(dt);
 
   bool updateTiles = false;
   if(is_down(MOUSE_LEFT) && !ui_is_hot() && !ui_is_active())
@@ -600,18 +838,35 @@ void update_level(float dt)
 
 void update_main_menu(float dt)
 {
-  int buttonID = line_id(1);
+  int button1_ID = line_id(1);
+  int button2_ID = line_id(2);
   Vec4 color = COLOR_WHITE;
 
-  if(is_hot(buttonID))
+  if(is_hot(button1_ID))
   {
     color = COLOR_GREEN;
   }
 
+  // Original button
   if(do_button(SPRITE_BUTTON_PLAY, IVec2{WORLD_WIDTH/2, WORLD_HEIGHT/2}, 
-               buttonID, {.material{.color = color}, .layer = get_layer(LAYER_UI, 10.0f)}))
+               button1_ID, {.material{.color = color}, .layer = get_layer(LAYER_UI, 10.0f)}))
   {
-    gameState->state = GAME_STATE_IN_LEVEL;
+    gameState->state = GAME_STATE_IN_LEVEL_1;
+  }
+
+  // Reset color
+  color = COLOR_WHITE;
+
+  if(is_hot(button2_ID))
+  {
+    color = COLOR_RED;
+  }
+
+  // New button
+  if(do_button(SPRITE_BUTTON_PLAY, IVec2{WORLD_WIDTH/2, (WORLD_HEIGHT * 3)/4}, 
+               button2_ID, {.material{.color = color}, .layer = get_layer(LAYER_UI, 10.0f)}))
+  {
+    gameState->state = GAME_STATE_IN_LEVEL_2;
   }
 
   do_ui_text(_(STRING_CELESTE_CLONE), {56, 20}, 
@@ -635,12 +890,18 @@ void simulate()
 
   switch(gameState->state)
   {
-    case GAME_STATE_IN_LEVEL:
+    case GAME_STATE_IN_LEVEL_1:
     {
       update_level(dt);
       break;
     }
   
+    case GAME_STATE_IN_LEVEL_2:
+    {
+      update_level(dt);
+      break;
+    }
+
     case GAME_STATE_MAIN_MENU:
     {
       update_main_menu(dt);
@@ -729,7 +990,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       solid.keyframes.add({8 * 10, 8 * 10});
       solid.pos = {8 * 2, 8 * 10};
       solid.speed.x = 50.0f;
-      gameState->solids.add(solid);
+      gameState->solidsLevel1.add(solid);
 
       solid = {};
       solid.spriteID = SPRITE_SOLID_02;
@@ -737,7 +998,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       solid.keyframes.add({12 * 20, 8 * 20});
       solid.pos = {12 * 20, 8 * 10};
       solid.speed.y = 50.0f;
-      gameState->solids.add(solid);
+      gameState->solidsLevel1.add(solid);
     }
 
     gameState->initialized = true;
@@ -787,9 +1048,9 @@ EXPORT_FN void update_game(GameState* gameStateIn,
 
   // Draw Solids
   {
-    for(int solidIdx = 0; solidIdx < gameState->solids.count; solidIdx++)
+    for(int solidIdx = 0; solidIdx < gameState->solidsLevel1.count; solidIdx++)
     {
-      Solid& solid = gameState->solids[solidIdx];
+      Solid& solid = gameState->solidsLevel1[solidIdx];
       IVec2 solidPos = lerp(solid.prevPos, solid.pos, interpolatedDT);
       draw_sprite(solid.spriteID, solidPos, {.layer = get_layer(LAYER_GAME, 0)});
     }
@@ -808,6 +1069,26 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                   .renderOptions = player.renderOptions,
                   .layer = get_layer(LAYER_GAME, 0)
                 });
+  }
+
+  // Draw Background
+  // Random start position outside the screen
+  DrawData tileData;
+  tileData.layer = get_layer(LAYER_GAME, 0);
+
+  float startX = -13.0f;
+  Vec2 tilePos = {startX, -13.0f};
+  Vec2 tileSize = Vec2{95.0f, 95.0f};
+  for (int rowIdx = 0; rowIdx < 5; rowIdx++)
+  {
+    for (int collIdx = 0; collIdx < 8; collIdx++)
+    {
+      draw_sprite(SPRITE_TILE_GRASS_01, tilePos, tileData);
+      tilePos.x += tileSize.x;
+    }
+
+    tilePos.x = startX;
+    tilePos.y += tileSize.y;
   }
 
   // Drawing Tileset

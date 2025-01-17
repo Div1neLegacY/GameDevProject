@@ -81,7 +81,8 @@ struct Solid
 enum GameStateID
 {
   GAME_STATE_MAIN_MENU,
-  GAME_STATE_IN_LEVEL,
+  GAME_STATE_IN_LEVEL_1,
+  GAME_STATE_IN_LEVEL_2,
 };
 
 struct GameState
@@ -91,7 +92,11 @@ struct GameState
   bool initialized = false;
 
   Player player;
-  Array<Solid, 20> solids;
+  // Level 1 Solids
+  Array<Solid, 20> solidsLevel1;
+
+  // Level 2 Solids
+  Array<Solid, 20> solidsLevel2;
   
   Array<IVec2, 21> tileCoords;
   Tile worldGrid[WORLD_GRID.x][WORLD_GRID.y];
@@ -115,3 +120,15 @@ extern "C"
                              UIState* uiStateIn,
                              float dt);
 }
+
+/**
+ * Updates player mechanics.
+ * enabledGravity - Allows gravity to affect player
+ */
+void static update_player(float dt, bool enabledFriction = true, bool enabledGravity = true, bool enabledGrounded = false);
+
+void static update_solids_level_1(float dt);
+
+void static update_solids_level_2(float dt);
+
+void static update_solids(float dt);

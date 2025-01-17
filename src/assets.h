@@ -16,11 +16,15 @@ enum SpriteID
   SPRITE_CELESTE,
   SPRITE_CELESTE_RUN,
   SPRITE_CELESTE_JUMP,
+  // Sprite Solids
   SPRITE_SOLID_01,
-  SPRITE_SOLID_02,  
+  SPRITE_SOLID_02,
+  // Buttons
   SPRITE_BUTTON_PLAY,
   SPRITE_BUTTON_SAVE,
-
+  // Tiles
+  SPRITE_TILE_GRASS_01,
+  // Count of sprite assets
   SPRITE_COUNT
 };
 
@@ -102,6 +106,13 @@ Sprite get_sprite(SpriteID spriteID)
     {
       sprite.atlasOffset = {80, 16};
       sprite.size = {32, 16};
+      break;
+    }
+
+    case SPRITE_TILE_GRASS_01:
+    {
+      sprite.atlasOffset = {112, 32};
+      sprite.size = {95, 95};
       break;
     }
   }
