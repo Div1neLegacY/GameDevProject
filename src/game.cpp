@@ -2,6 +2,8 @@
 
 #include "assets.h"
 #include "texts.h"
+#include <cmath>
+#include <iostream>
 
 // #############################################################################
 //                           Game Constants
@@ -764,7 +766,7 @@ void update_level(float dt)
     }
   }
 
-  if(updateTiles)
+  /* if(updateTiles)
   {
     // Neighbouring Tiles        Top    Left      Right       Bottom  
     int neighbourOffsets[24] = { 0,-1,  -1, 0,     1, 0,       0, 1,   
@@ -833,7 +835,7 @@ void update_level(float dt)
         }
       }
     }
-  }
+  } */
 }
 
 void update_main_menu(float dt)
@@ -952,7 +954,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
 
     // Tileset
     {
-      IVec2 tilesPosition = {48, 0};
+      /* IVec2 tilesPosition = {48, 0};
 
       for(int y = 0; y < 5; y++)
       {
@@ -963,7 +965,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       }
 
       // Black inside
-      gameState->tileCoords.add({tilesPosition.x, tilesPosition.y + 5 * 8});
+      gameState->tileCoords.add({tilesPosition.x, tilesPosition.y + 5 * 8}); */
     }
 
     // Key Mappings
@@ -1031,6 +1033,65 @@ EXPORT_FN void update_game(GameState* gameStateIn,
 
   float interpolatedDT = (float)(gameState->updateTimer / UPDATE_DELAY);
 
+  // Draw Background
+  {
+    DrawData tileData;
+    tileData.layer = get_layer(LAYER_GAME, 0);
+
+    // Random start position outside the screen
+    //float startX = -15.0f;
+    //Vec2 tilePos = {startX, -15.0f};
+    //Vec2 tileSize = Vec2{95.0f, 95.0f};
+
+    // Offset from the player's current location
+    /* Player& player = gameState->player;
+    tilePos.x += player.pos.x;
+    tilePos.y += player.pos.y; */
+
+    /* for (int rowIdx = 0; rowIdx < 5; rowIdx++)
+    {
+      for (int collIdx = 0; collIdx < TILESIZE; collIdx++)
+      {
+        draw_sprite(SPRITE_TILE_GRASS_01, tilePos, tileData);
+        tilePos.x += tileSize.x;
+      }
+
+      tilePos.x = startX;
+      tilePos.y += tileSize.y;
+    } */
+
+    // Calculate the player's current tile
+    Player& player = gameState->player;
+
+    
+
+    float playerTileX = std::floor(static_cast<float>(player.pos.x) / TILESIZE);
+    float playerTileY = std::floor(static_cast<float>(player.pos.y) / TILESIZE);
+
+    //std::cout << "PlayerTile: (x=" << playerTileX << ", y=" << playerTileY << ")" << std::endl;
+
+    // Render tiles around the player
+    Vec2 playerTileVec = {playerTileX, playerTileY};
+    draw_sprite(SPRITE_TILE_GRASS_01, playerTileVec, tileData);
+
+    // Right of center
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x + TILESIZE, playerTileVec.y}, tileData);
+    // Left of center
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x - TILESIZE, playerTileVec.y}, tileData);
+    // Above center
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x, playerTileVec.y + TILESIZE}, tileData);
+    // Below center
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x, playerTileVec.y - TILESIZE}, tileData);
+    // Top left
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x - TILESIZE, playerTileVec.y + TILESIZE}, tileData);
+    // Top right
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x + TILESIZE, playerTileVec.y + TILESIZE}, tileData);
+    // Bottom left
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x - TILESIZE, playerTileVec.y - TILESIZE}, tileData);
+    // Bottom right
+    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x + TILESIZE, playerTileVec.y - TILESIZE}, tileData);
+  }
+
   // Draw UI
   {
     for(int uiElementIdx = 0; uiElementIdx < uiState->uiElements.count; uiElementIdx++)
@@ -1052,7 +1113,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     {
       Solid& solid = gameState->solidsLevel1[solidIdx];
       IVec2 solidPos = lerp(solid.prevPos, solid.pos, interpolatedDT);
-      draw_sprite(solid.spriteID, solidPos, {.layer = get_layer(LAYER_GAME, 0)});
+      draw_sprite(solid.spriteID, solidPos, {.layer = get_layer(LAYER_GAME, 1)});
     }
   }
 
@@ -1067,32 +1128,12 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                 {
                   .animationIdx = animationIdx,
                   .renderOptions = player.renderOptions,
-                  .layer = get_layer(LAYER_GAME, 0)
+                  .layer = get_layer(LAYER_GAME, 1)
                 });
   }
 
-  // Draw Background
-  // Random start position outside the screen
-  DrawData tileData;
-  tileData.layer = get_layer(LAYER_GAME, 0);
-
-  float startX = -13.0f;
-  Vec2 tilePos = {startX, -13.0f};
-  Vec2 tileSize = Vec2{95.0f, 95.0f};
-  for (int rowIdx = 0; rowIdx < 5; rowIdx++)
-  {
-    for (int collIdx = 0; collIdx < 8; collIdx++)
-    {
-      draw_sprite(SPRITE_TILE_GRASS_01, tilePos, tileData);
-      tilePos.x += tileSize.x;
-    }
-
-    tilePos.x = startX;
-    tilePos.y += tileSize.y;
-  }
-
   // Drawing Tileset
-  {
+  /* {
     for(int y = 0; y < WORLD_GRID.y; y++)
     {
       for(int x = 0; x < WORLD_GRID.x; x++)
@@ -1116,5 +1157,5 @@ EXPORT_FN void update_game(GameState* gameStateIn,
         draw_quad(transform);
       }
     }
-  }
+  } */
 }

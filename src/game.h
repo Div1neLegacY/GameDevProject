@@ -13,7 +13,8 @@ constexpr int UPDATES_PER_SECOND = 60;
 constexpr double UPDATE_DELAY = 1.0 / UPDATES_PER_SECOND;
 constexpr int WORLD_WIDTH = 320;
 constexpr int WORLD_HEIGHT = 180;
-constexpr int TILESIZE = 8;
+constexpr int TILESIZE = 95;
+constexpr int GRID_RADIUS = 5;
 constexpr IVec2 WORLD_GRID = {WORLD_WIDTH / TILESIZE, WORLD_HEIGHT / TILESIZE};
 
 // #############################################################################
