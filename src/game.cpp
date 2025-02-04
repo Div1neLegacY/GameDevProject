@@ -975,105 +975,6 @@ void update_level(float dt)
 
   // Update Solids
   update_solids(dt);
-
-  // Update Enemies
-  //update_enemies(dt);
-
-  bool updateTiles = false;
-  /*if(is_down(MOUSE_LEFT) && !ui_is_hot() && !ui_is_active())
-  {
-    IVec2 worldPos = screen_to_world(input->mousePos);
-    IVec2 mousePosWorld = input->mousePosWorld;
-    Tile* tile = get_tile(worldPos);
-    if(tile)
-    {
-      tile->isVisible = true;
-      updateTiles = true;
-    }
-  }
-
-  if(is_down(MOUSE_RIGHT))
-  {
-    IVec2 worldPos = screen_to_world(input->mousePos);
-    IVec2 mousePosWorld = input->mousePosWorld;
-    Tile* tile = get_tile(worldPos);
-    if(tile)
-    {
-      tile->isVisible = false;
-      updateTiles = true;
-    }
-  }*/
-
-  /*if(updateTiles)
-  {
-    // Neighbouring Tiles        Top    Left      Right       Bottom  
-    int neighbourOffsets[24] = { 0,-1,  -1, 0,     1, 0,       0, 1,   
-    //                          Topleft Topright Bottomleft Bottomright
-                                -1,-1,   1,-1,    -1, 1,       1, 1,
-    //                           Top2   Left2     Right2      Bottom2
-                                 0,-2,  -2, 0,     2, 0,       0, 2};
-
-    // Topleft     = BIT(4) = 16
-    // Toplright   = BIT(5) = 32
-    // Bottomleft  = BIT(6) = 64
-    // Bottomright = BIT(7) = 128
-
-    for(int y = 0; y < WORLD_GRID.y; y++)
-    {
-      for(int x = 0; x < WORLD_GRID.x; x++)
-      {
-        Tile* tile = get_tile(x, y);
-
-        if(!tile->isVisible)
-        {
-          continue;
-        }
-
-        tile->neighbourMask = 0;
-        int neighbourCount = 0;
-        int extendedNeighbourCount = 0;
-        int emptyNeighbourSlot = 0;
-
-        // Look at the sorrounding 12 Neighbours
-        for(int n = 0; n < 12; n++)
-        {
-          Tile* neighbour = get_tile(x + neighbourOffsets[n * 2],
-                                     y + neighbourOffsets[n * 2 + 1]);
-
-          // No neighbour means the edge of the world
-          if(!neighbour || neighbour->isVisible)
-          {
-            tile->neighbourMask |= BIT(n);
-            if(n < 8) // Counting direct neighbours
-            {
-              neighbourCount++;
-            }
-            else // Counting neighbours 1 Tile away
-            {
-              extendedNeighbourCount++;
-            }
-          }
-          else if(n < 8)
-          {
-            emptyNeighbourSlot = n;
-          }
-        }
-
-        if(neighbourCount == 7 && emptyNeighbourSlot >= 4) // We have a corner
-        {
-          tile->neighbourMask = 16 + (emptyNeighbourSlot - 4);
-        }
-        else if(neighbourCount == 8 && extendedNeighbourCount == 4)
-        {
-          tile->neighbourMask = 20;
-        }
-        else
-        {
-          tile->neighbourMask = tile->neighbourMask & 0b1111;
-        }
-      }
-    }
-  }*/
 }
 
 void update_main_menu(float dt)
@@ -1109,7 +1010,8 @@ void update_main_menu(float dt)
     gameState->state = GAME_STATE_IN_LEVEL_2;
   }
 
-  do_ui_text(_(STRING_CELESTE_CLONE), {56, 20}, 
+  // @TODO TITLE_FIX_ISSUE Find better way to center this based on string length
+  do_ui_text(_(STRING_GAME_TITLE), Vec2{WORLD_WIDTH / 4, WORLD_HEIGHT / 6}, 
              {.material{.color = COLOR_BLACK}, 
              .fontSize = 2.0f, 
              .layer = get_layer(LAYER_UI, 10)});
@@ -1173,14 +1075,14 @@ EXPORT_FN void update_game(GameState* gameStateIn,
 
   if(!gameState->initialized)
   {
-    // play_sound("First Steps", SOUND_OPTION_LOOP);
+    play_sound("First Steps", SOUND_OPTION_LOOP);
     renderData->gameCamera.dimensions = {WORLD_WIDTH, WORLD_HEIGHT};
-    renderData->gameCamera.position.x = 160;
-    renderData->gameCamera.position.y = -90;
+    renderData->gameCamera.position.x = (WORLD_WIDTH / 2);
+    renderData->gameCamera.position.y = -(WORLD_HEIGHT / 2);
 
     renderData->uiCamera.dimensions = {WORLD_WIDTH, WORLD_HEIGHT};
-    renderData->uiCamera.position.x = 160;
-    renderData->uiCamera.position.y = -90;
+    renderData->uiCamera.position.x = (WORLD_WIDTH / 2);
+    renderData->uiCamera.position.y = -(WORLD_HEIGHT / 2);
 
     // Player
     {
@@ -1209,7 +1111,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     // Solids
     {
       Solid solid = {};
-      solid.spriteID = SPRITE_SOLID_01;
+      solid.spriteID = SPRITE_SOLID_02;
       solid.keyframes.add({8 * 2,  8 * 10});
       solid.keyframes.add({8 * 10, 8 * 10});
       solid.pos = {8 * 2, 8 * 10};
@@ -1225,25 +1127,6 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       solid.speed.x = 20.0f;
       solid.speed.y = 20.0f;
       gameState->solidsLevel1.add(solid);
-    }
-
-    // Enemies
-    {
-      /*Solid enemy = {};
-      enemy.spriteID = SPRITE_SOLID_02;
-      //enemy.keyframes.add(gameState->player.pos);
-      //enemy.keyframes.add({8 * 10, 8 * 10});
-      enemy.pos = {8 * 2, 8 * 10};
-      enemy.speed.x = 50.0f;
-      gameState->enemiesLevel1.add(enemy);*/
-
-      /*enemy = {};
-      enemy.spriteID = SPRITE_SOLID_02;
-      enemy.keyframes.add(gameState->player.pos);
-      //enemy.keyframes.add({12 * 20, 8 * 20});
-      enemy.pos = {12 * 20, 8 * 10};
-      enemy.speed.y = 50.0f;
-      gameState->enemiesLevel1.add(enemy);*/
     }
 
     gameState->initialized = true;
@@ -1314,14 +1197,6 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       draw_sprite(solid.spriteID, solidPos, {.layer = get_layer(LAYER_GAME, 1)});
     }
   }
-
-  // Draw Enemies
-  /*for(int enemyIdx = 0; enemyIdx < gameState->enemiesLevel1.count; enemyIdx++)
-    {
-      Solid& enemy = gameState->enemiesLevel1[enemyIdx];
-      IVec2 enemyPos = lerp(enemy.prevPos, enemy.pos, interpolatedDT);
-      draw_sprite(enemy.spriteID, enemyPos, {.layer = get_layer(LAYER_GAME, 1)});
-    }*/
 
   // Draw Player
   {
