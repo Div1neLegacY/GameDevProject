@@ -14,8 +14,10 @@ constexpr double UPDATE_DELAY = 1.0 / UPDATES_PER_SECOND;
 constexpr int WORLD_WIDTH = 320;
 constexpr int WORLD_HEIGHT = 180;
 constexpr int TILESIZE = 95;
+constexpr int NUM_OF_TILE_ROWS = 3;
+constexpr int NUM_OF_TILE_COLUMNS = 3;
 constexpr int GRID_RADIUS = 5;
-constexpr IVec2 WORLD_GRID = {WORLD_WIDTH / TILESIZE, WORLD_HEIGHT / TILESIZE};
+constexpr IVec2 WORLD_GRID = {NUM_OF_TILE_COLUMNS, NUM_OF_TILE_ROWS};
 
 // #############################################################################
 //                           Game Structs
@@ -95,6 +97,7 @@ struct GameState
   Player player;
   // Level 1 Solids
   Array<Solid, 20> solidsLevel1;
+  Array<IRect, 9> backgroundTiles;
 
   // Level 2 Solids
   Array<Solid, 20> solidsLevel2;

@@ -613,8 +613,6 @@ bool rect_collision(IRect a, IRect b)
          a.pos.y + a.size.y > b.pos.y;    // Collision on Top of a and Bottom of b
 }
 
-
-
 // #############################################################################
 //                           WAV File stuff
 // #############################################################################

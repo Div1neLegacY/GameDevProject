@@ -44,10 +44,36 @@ bool is_down(GameInputType type)
   return false;
 }
 
+/**
+ * Gets the grid index [x, y] of position in world
+ * 
+ * e.g. starting tile [0, 0], moving over 1 tile to left --> [-1, 0]
+ */
 IVec2 get_grid_pos(IVec2 worldPos)
 {
-  return {worldPos.x / TILESIZE, worldPos.y / TILESIZE};
+  int gridPosX;
+  int gridPosY;
+  if (worldPos.x > 0)
+  {
+    gridPosX = (worldPos.x + (TILESIZE / 2)) / TILESIZE;
+  }
+  else
+  {
+    gridPosX = (worldPos.x - (TILESIZE / 2)) / TILESIZE;
+  }
+
+  if (worldPos.y > 0)
+  {
+    gridPosY = (worldPos.y + (TILESIZE / 2)) / TILESIZE;
+  }
+  else
+  {
+    gridPosY = (worldPos.y - (TILESIZE / 2)) / TILESIZE;
+  }
+
+  return {gridPosX, gridPosY};
 }
+
 
 Tile* get_tile(int x, int y)
 {
@@ -741,8 +767,46 @@ void update_level(float dt)
   // Update Solids
   update_solids(dt);
 
+  // Update Background
+  {
+    // Calculate the player's current tile
+    Player& player = gameState->player;
+
+    // Get tile cell that the player is in
+    IVec2 playerTile = get_grid_pos(IVec2{player.pos.x, player.pos.y});
+
+    
+
+    // @TODO not efficient
+    gameState->backgroundTiles.clear();
+
+    // Define X of starting tile position
+    int startingXPos = (playerTile.x * TILESIZE) - TILESIZE;
+
+    // Dynamically generate tiles for background based on # of columns and rows
+    for (int column = 0; column < NUM_OF_TILE_COLUMNS; column++)
+    {
+      // Define Y of starting tile position
+      int startingYPos = (playerTile.y * TILESIZE) + TILESIZE;
+
+      for (int row = 0; row < NUM_OF_TILE_ROWS; row++)
+      {
+        IRect tile = {};
+        tile.pos = IVec2{startingXPos, startingYPos};
+        tile.size = IVec2{TILESIZE, TILESIZE};
+        gameState->backgroundTiles.add(tile);
+
+        // Modify Y for next row entry
+        startingYPos -= TILESIZE;
+      }
+
+      // Modify X for next column entry
+      startingXPos += TILESIZE;
+    }
+  }
+
   bool updateTiles = false;
-  if(is_down(MOUSE_LEFT) && !ui_is_hot() && !ui_is_active())
+  /*if(is_down(MOUSE_LEFT) && !ui_is_hot() && !ui_is_active())
   {
     IVec2 worldPos = screen_to_world(input->mousePos);
     IVec2 mousePosWorld = input->mousePosWorld;
@@ -764,9 +828,9 @@ void update_level(float dt)
       tile->isVisible = false;
       updateTiles = true;
     }
-  }
+  }*/
 
-  /* if(updateTiles)
+  /*if(updateTiles)
   {
     // Neighbouring Tiles        Top    Left      Right       Bottom  
     int neighbourOffsets[24] = { 0,-1,  -1, 0,     1, 0,       0, 1,   
@@ -835,7 +899,7 @@ void update_level(float dt)
         }
       }
     }
-  } */
+  }*/
 }
 
 void update_main_menu(float dt)
@@ -952,22 +1016,6 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       player.animationSprites[PLAYER_ANIM_RUN] = SPRITE_CELESTE_RUN;
     }
 
-    // Tileset
-    {
-      /* IVec2 tilesPosition = {48, 0};
-
-      for(int y = 0; y < 5; y++)
-      {
-        for(int x = 0; x < 4; x++)
-        {
-          gameState->tileCoords.add({tilesPosition.x +  x * 8, tilesPosition.y + y * 8});
-        }
-      }
-
-      // Black inside
-      gameState->tileCoords.add({tilesPosition.x, tilesPosition.y + 5 * 8}); */
-    }
-
     // Key Mappings
     {
       gameState->keyMappings[MOVE_UP].keys.add(KEY_W);
@@ -978,8 +1026,8 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       gameState->keyMappings[MOVE_DOWN].keys.add(KEY_DOWN);
       gameState->keyMappings[MOVE_RIGHT].keys.add(KEY_D);
       gameState->keyMappings[MOVE_RIGHT].keys.add(KEY_RIGHT);
-      gameState->keyMappings[MOUSE_LEFT].keys.add(KEY_MOUSE_LEFT);
-      gameState->keyMappings[MOUSE_RIGHT].keys.add(KEY_MOUSE_RIGHT);
+      //gameState->keyMappings[MOUSE_LEFT].keys.add(KEY_MOUSE_LEFT);
+      //gameState->keyMappings[MOUSE_RIGHT].keys.add(KEY_MOUSE_RIGHT);
       gameState->keyMappings[JUMP].keys.add(KEY_SPACE);
       gameState->keyMappings[PAUSE].keys.add(KEY_ESCAPE);
     }
@@ -1001,6 +1049,37 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       solid.pos = {12 * 20, 8 * 10};
       solid.speed.y = 50.0f;
       gameState->solidsLevel1.add(solid);
+    }
+
+    // Define background
+    {
+      // Calculate the player's current tile
+      Player& player = gameState->player;
+      IVec2 playerTileVec = {player.pos.x, player.pos.y};
+
+      // Define X of starting tile position
+      int startingXPos = playerTileVec.x - TILESIZE;
+
+      // Dynamically generate tiles for background based on # of columns and rows
+      for (int column = 0; column < NUM_OF_TILE_COLUMNS; column++)
+      {
+        // Define Y of starting tile position
+        int startingYPos = playerTileVec.y + TILESIZE;
+
+        for (int row = 0; row < NUM_OF_TILE_ROWS; row++)
+        {
+          IRect tile = {};
+          tile.pos = IVec2{startingXPos, startingYPos};
+          tile.size = IVec2{TILESIZE, TILESIZE};
+          gameState->backgroundTiles.add(tile);
+
+          // Modify Y for next row entry
+          startingYPos -= TILESIZE;
+        }
+
+        // Modify X for next column entry
+        startingXPos += TILESIZE;
+      }
     }
 
     gameState->initialized = true;
@@ -1032,65 +1111,6 @@ EXPORT_FN void update_game(GameState* gameStateIn,
   }
 
   float interpolatedDT = (float)(gameState->updateTimer / UPDATE_DELAY);
-
-  // Draw Background
-  {
-    DrawData tileData;
-    tileData.layer = get_layer(LAYER_GAME, 0);
-
-    // Random start position outside the screen
-    //float startX = -15.0f;
-    //Vec2 tilePos = {startX, -15.0f};
-    //Vec2 tileSize = Vec2{95.0f, 95.0f};
-
-    // Offset from the player's current location
-    /* Player& player = gameState->player;
-    tilePos.x += player.pos.x;
-    tilePos.y += player.pos.y; */
-
-    /* for (int rowIdx = 0; rowIdx < 5; rowIdx++)
-    {
-      for (int collIdx = 0; collIdx < TILESIZE; collIdx++)
-      {
-        draw_sprite(SPRITE_TILE_GRASS_01, tilePos, tileData);
-        tilePos.x += tileSize.x;
-      }
-
-      tilePos.x = startX;
-      tilePos.y += tileSize.y;
-    } */
-
-    // Calculate the player's current tile
-    Player& player = gameState->player;
-
-    
-
-    float playerTileX = std::floor(static_cast<float>(player.pos.x) / TILESIZE);
-    float playerTileY = std::floor(static_cast<float>(player.pos.y) / TILESIZE);
-
-    //std::cout << "PlayerTile: (x=" << playerTileX << ", y=" << playerTileY << ")" << std::endl;
-
-    // Render tiles around the player
-    Vec2 playerTileVec = {playerTileX, playerTileY};
-    draw_sprite(SPRITE_TILE_GRASS_01, playerTileVec, tileData);
-
-    // Right of center
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x + TILESIZE, playerTileVec.y}, tileData);
-    // Left of center
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x - TILESIZE, playerTileVec.y}, tileData);
-    // Above center
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x, playerTileVec.y + TILESIZE}, tileData);
-    // Below center
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x, playerTileVec.y - TILESIZE}, tileData);
-    // Top left
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x - TILESIZE, playerTileVec.y + TILESIZE}, tileData);
-    // Top right
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x + TILESIZE, playerTileVec.y + TILESIZE}, tileData);
-    // Bottom left
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x - TILESIZE, playerTileVec.y - TILESIZE}, tileData);
-    // Bottom right
-    draw_sprite(SPRITE_TILE_GRASS_01, Vec2{playerTileVec.x + TILESIZE, playerTileVec.y - TILESIZE}, tileData);
-  }
 
   // Draw UI
   {
@@ -1132,30 +1152,23 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                 });
   }
 
-  // Drawing Tileset
-  /* {
-    for(int y = 0; y < WORLD_GRID.y; y++)
+  // Draw Background
+  {
+    DrawData tileData;
+    tileData.layer = get_layer(LAYER_GAME, 0);
+
+    // Calculate the player's current tile
+    Player& player = gameState->player;
+    float playerTileX = std::floor(static_cast<float>(player.pos.x) / TILESIZE);
+    float playerTileY = std::floor(static_cast<float>(player.pos.y) / TILESIZE);
+
+    // Render tiles around the player
+    Vec2 playerTileVec = {playerTileX, playerTileY};
+
+    // Draw all background tiles
+    for (int i = 0; i < gameState->backgroundTiles.count; i++)
     {
-      for(int x = 0; x < WORLD_GRID.x; x++)
-      {
-        Tile* tile = get_tile(x, y);
-
-        if(!tile->isVisible)
-        {
-          continue;
-        }
-
-                // Draw Tile
-        Transform transform = {};
-        // Draw the Tile around the center
-        transform.materialIdx = get_material_idx({.color  = COLOR_WHITE});
-        transform.pos = {x * (float)TILESIZE, y * (float)TILESIZE};
-        transform.size = {8, 8};
-        transform.spriteSize = {8, 8};
-        transform.atlasOffset = gameState->tileCoords[tile->neighbourMask];
-        transform.layer = get_layer(LAYER_GAME, 0);
-        draw_quad(transform);
-      }
+      draw_sprite(SPRITE_TILE_GRASS_01, gameState->backgroundTiles[i].pos, tileData);
     }
-  } */
+  }
 }
