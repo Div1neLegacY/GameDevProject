@@ -99,6 +99,9 @@ struct GameState
   Array<Solid, 20> solidsLevel1;
   Array<IRect, NUM_OF_TILE_ROWS * NUM_OF_TILE_COLUMNS> backgroundTiles;
 
+  // Level 1 Enemies
+  Array<Solid, 5> enemiesLevel1;
+
   // Level 2 Solids
   Array<Solid, 20> solidsLevel2;
   

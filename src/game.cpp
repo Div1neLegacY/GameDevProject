@@ -420,6 +420,7 @@ void static update_solids_level_1(float dt)
   {
     Solid& solid = gameState->solidsLevel1[solidIdx];
     solid.prevPos = solid.pos;
+    solid.keyframes[0] = gameState->player.pos;
 
     IRect solidRect = get_solid_rect(solid);
     solidRect.pos -= 1;
@@ -749,23 +750,23 @@ void static update_solids(float dt)
   }
 }
 
+void static update_enemies(float dt)
+{
+  if (gameState->state == GAME_STATE_IN_LEVEL_1)
+  {
+    for (int i = 0; i < gameState->enemiesLevel1.count; i++)
+    {
+      gameState->enemiesLevel1[i].keyframes[0] = gameState->player.pos;
+    }
+  }
+}
+
 void update_level(float dt)
 {
   if(just_pressed(PAUSE))
   {
     gameState->state = GAME_STATE_MAIN_MENU;
   }
-
-  // Updates for the main player
-  update_player(dt, true, false, true);
-
-  // Update camera to follow player
-  Player& player = gameState->player;
-  renderData->gameCamera.position.x = player.pos.x;
-  renderData->gameCamera.position.y = -player.pos.y;
-
-  // Update Solids
-  update_solids(dt);
 
   // Update Background
   {
@@ -803,6 +804,20 @@ void update_level(float dt)
       startingXPos += TILESIZE;
     }
   }
+
+  // Updates for the main player
+  update_player(dt, true, false, true);
+
+  // Update camera to follow player
+  Player& player = gameState->player;
+  renderData->gameCamera.position.x = player.pos.x;
+  renderData->gameCamera.position.y = -player.pos.y;
+
+  // Update Solids
+  update_solids(dt);
+
+  // Update Enemies
+  //update_enemies(dt);
 
   bool updateTiles = false;
   /*if(is_down(MOUSE_LEFT) && !ui_is_hot() && !ui_is_active())
@@ -1050,6 +1065,25 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       gameState->solidsLevel1.add(solid);
     }
 
+    // Enemies
+    {
+      /*Solid enemy = {};
+      enemy.spriteID = SPRITE_SOLID_02;
+      enemy.keyframes.add(gameState->player.pos);
+      //enemy.keyframes.add({8 * 10, 8 * 10});
+      enemy.pos = {8 * 2, 8 * 10};
+      enemy.speed.x = 50.0f;
+      gameState->enemiesLevel1.add(enemy);
+
+      enemy = {};
+      enemy.spriteID = SPRITE_SOLID_02;
+      enemy.keyframes.add(gameState->player.pos);
+      //enemy.keyframes.add({12 * 20, 8 * 20});
+      enemy.pos = {12 * 20, 8 * 10};
+      enemy.speed.y = 50.0f;
+      gameState->enemiesLevel1.add(enemy);*/
+    }
+
     gameState->initialized = true;
   }
 
@@ -1079,6 +1113,20 @@ EXPORT_FN void update_game(GameState* gameStateIn,
   }
 
   float interpolatedDT = (float)(gameState->updateTimer / UPDATE_DELAY);
+  
+  // *GENERAL NOTE* Order of drawing matters here, background should be first
+
+  // Draw background tiles
+  {
+    DrawData tileData;
+    tileData.layer = get_layer(LAYER_GAME, 0);
+
+    // Draw all background tiles
+    for (int i = 0; i < gameState->backgroundTiles.count; i++)
+    {
+      draw_sprite(SPRITE_TILE_GRASS_01, gameState->backgroundTiles[i].pos, tileData);
+    }
+  }
 
   // Draw UI
   {
@@ -1105,6 +1153,14 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     }
   }
 
+  // Draw Enemies
+  /*for(int enemyIdx = 0; enemyIdx < gameState->enemiesLevel1.count; enemyIdx++)
+    {
+      Solid& enemy = gameState->enemiesLevel1[enemyIdx];
+      IVec2 enemyPos = lerp(enemy.prevPos, enemy.pos, interpolatedDT);
+      draw_sprite(enemy.spriteID, enemyPos, {.layer = get_layer(LAYER_GAME, 2)});
+    }*/
+
   // Draw Player
   {
     Player& player = gameState->player;
@@ -1116,19 +1172,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                 {
                   .animationIdx = animationIdx,
                   .renderOptions = player.renderOptions,
-                  .layer = get_layer(LAYER_GAME, 1)
+                  .layer = get_layer(LAYER_GAME, 2)
                 });
-  }
-
-  // Draw background tiles
-  {
-    DrawData tileData;
-    tileData.layer = get_layer(LAYER_GAME, 0);
-
-    // Draw all background tiles
-    for (int i = 0; i < gameState->backgroundTiles.count; i++)
-    {
-      draw_sprite(SPRITE_TILE_GRASS_01, gameState->backgroundTiles[i].pos, tileData);
-    }
   }
 }
