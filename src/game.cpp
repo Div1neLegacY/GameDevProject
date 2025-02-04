@@ -775,19 +775,18 @@ void update_level(float dt)
     // Get tile cell that the player is in
     IVec2 playerTile = get_grid_pos(IVec2{player.pos.x, player.pos.y});
 
-    
-
     // @TODO not efficient
     gameState->backgroundTiles.clear();
 
     // Define X of starting tile position
-    int startingXPos = (playerTile.x * TILESIZE) - TILESIZE;
+    // (get starting tile position) - (offset to take in account for dynamic tile grid sizes)
+    int startingXPos = (playerTile.x * TILESIZE) - (TILESIZE * (NUM_OF_TILE_COLUMNS / 2));
 
     // Dynamically generate tiles for background based on # of columns and rows
     for (int column = 0; column < NUM_OF_TILE_COLUMNS; column++)
     {
       // Define Y of starting tile position
-      int startingYPos = (playerTile.y * TILESIZE) + TILESIZE;
+      int startingYPos = (playerTile.y * TILESIZE) + (TILESIZE * (NUM_OF_TILE_ROWS / 2));
 
       for (int row = 0; row < NUM_OF_TILE_ROWS; row++)
       {
@@ -1051,37 +1050,6 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       gameState->solidsLevel1.add(solid);
     }
 
-    // Define background
-    {
-      // Calculate the player's current tile
-      Player& player = gameState->player;
-      IVec2 playerTileVec = {player.pos.x, player.pos.y};
-
-      // Define X of starting tile position
-      int startingXPos = playerTileVec.x - TILESIZE;
-
-      // Dynamically generate tiles for background based on # of columns and rows
-      for (int column = 0; column < NUM_OF_TILE_COLUMNS; column++)
-      {
-        // Define Y of starting tile position
-        int startingYPos = playerTileVec.y + TILESIZE;
-
-        for (int row = 0; row < NUM_OF_TILE_ROWS; row++)
-        {
-          IRect tile = {};
-          tile.pos = IVec2{startingXPos, startingYPos};
-          tile.size = IVec2{TILESIZE, TILESIZE};
-          gameState->backgroundTiles.add(tile);
-
-          // Modify Y for next row entry
-          startingYPos -= TILESIZE;
-        }
-
-        // Modify X for next column entry
-        startingXPos += TILESIZE;
-      }
-    }
-
     gameState->initialized = true;
   }
 
@@ -1152,18 +1120,10 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                 });
   }
 
-  // Draw Background
+  // Draw background tiles
   {
     DrawData tileData;
     tileData.layer = get_layer(LAYER_GAME, 0);
-
-    // Calculate the player's current tile
-    Player& player = gameState->player;
-    float playerTileX = std::floor(static_cast<float>(player.pos.x) / TILESIZE);
-    float playerTileY = std::floor(static_cast<float>(player.pos.y) / TILESIZE);
-
-    // Render tiles around the player
-    Vec2 playerTileVec = {playerTileX, playerTileY};
 
     // Draw all background tiles
     for (int i = 0; i < gameState->backgroundTiles.count; i++)
