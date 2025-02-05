@@ -148,11 +148,14 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
   }
 
   // Attack
-  if(just_pressed(ATTACK) && grounded)
+  if(just_pressed(ATTACK))
   {
-    switchAtlasCallback("projectiles");
+    // Move basic projectile sprite to "master" atlas
+    //addSpriteToAtlasCallback("master", "projectiles", get_sprite(SPRITE_BASIC_PROJECTILE), 0, 0);
 
-    draw_sprite(SPRITE_BASIC_PROJECTILE, player.pos, {.layer = get_layer(LAYER_GAME, 2)});
+    //switchAtlasCallback("projectiles");
+
+    //draw_sprite(SPRITE_BASIC_PROJECTILE, player.pos, {.layer = get_layer(LAYER_GAME, 2)});
 
     // Switch back to master atlas
     //switchAtlasCallback("master");
@@ -1216,8 +1219,10 @@ EXPORT_FN void update_game(GameState* gameStateIn,
   }
 }
 
-EXPORT_FN void game_init(std::function<void(const std::string&)> callback)
+EXPORT_FN void game_init(
+  std::function<void(const std::string&)> switch_atlas_callback,
+  std::function<void(const std::string&, const std::string&, Sprite, int, int)> add_sprite_to_atlas_callback)
 {
-  // Initialize necessary projectiles into game
-  switchAtlasCallback = callback;
+  switchAtlasCallback = switch_atlas_callback;
+  addSpriteToAtlasCallback = add_sprite_to_atlas_callback;
 }

@@ -59,6 +59,13 @@ void switch_atlas_callback(const std::string& atlasName) {
     switch_texture_atlas(atlasName);
 }
 
+void add_sprite_to_atlas_callback(const std::string& destinationAtlasName,
+                                  const std::string& sourceAtlasName,
+                                  Sprite spriteToMoveOver,
+                                  int x, int y) {
+    add_sprite_to_atlas(destinationAtlasName, sourceAtlasName, spriteToMoveOver, x, y);
+}
+
 int main()
 {
   // Initialize timestamp
@@ -129,7 +136,8 @@ int main()
 
     if (initialize_game)
     {
-      game_init(switch_atlas_callback);
+      game_init(switch_atlas_callback,
+                add_sprite_to_atlas_callback);
       initialize_game = false;
     }
 
@@ -157,9 +165,10 @@ void update_game(GameState* gameStateIn,
   update_game_ptr(gameStateIn ,renderDataIn, inputIn, soundStateIn, uiStateIn, dt);
 }
 
-void game_init(std::function<void(const std::string&)> callback)
+void game_init(std::function<void(const std::string&)> switch_atlas_callback,
+               std::function<void(const std::string&, const std::string&, Sprite, int, int)> add_sprite_to_atlas_callback)
 {
-  game_init_ptr(callback);
+  game_init_ptr(switch_atlas_callback, add_sprite_to_atlas_callback);
 }
 
 double get_delta_time()

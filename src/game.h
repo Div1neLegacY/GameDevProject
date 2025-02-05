@@ -119,6 +119,7 @@ static GameState* gameState;
 
 // Callbacks
 std::function<void(const std::string&)> switchAtlasCallback;
+std::function<void(const std::string&, const std::string&, Sprite, int, int)> addSpriteToAtlasCallback;
 
 // #############################################################################
 //                           Game Functions (Exposed)
@@ -132,7 +133,8 @@ extern "C"
                              UIState* uiStateIn,
                              float dt);
 
-  EXPORT_FN void game_init(std::function<void(const std::string&)> callback);
+  EXPORT_FN void game_init(std::function<void(const std::string&)> switch_atlas_callback,
+                           std::function<void(const std::string&, const std::string&, Sprite, int, int)> add_sprite_to_atlas_callback);
 }
 
 /**

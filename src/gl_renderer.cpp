@@ -16,9 +16,9 @@
 // #############################################################################
 //                           OpenGL Constants
 // #############################################################################
-const char* MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS.png";
-const char* PROJECTILES_MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_PROJECTILES.png";
-const char* ENEMIES_MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_ENEMIES.png";
+const char* MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_MASTER.png";
+const char* PROJECTILES_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_PROJECTILES.png";
+const char* ENEMIES_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_ENEMIES.png";
 
 
 // #############################################################################
@@ -42,7 +42,7 @@ struct GLContext
 //                           OpenGL Globals
 // #############################################################################
 static GLContext glContext;
-std::map<std::string, GLuint> textureAtlases;
+std::map<std::string, std::pair<GLuint, const char*>> textureAtlases;
 
 // #############################################################################
 //                           OpenGL Functions
@@ -221,11 +221,36 @@ GLuint load_texture_with_stbi(const char* texturePath)
   return glContext.textureID;
 }
 
+/**
+ * Switches the currently loaded in memory texture atlas
+ */
 void switch_texture_atlas(const std::string& atlasName)
 {
-  GLuint atlasID = textureAtlases[atlasName];
+  GLuint atlasID = textureAtlases[atlasName].first;
   glActiveTexture(GL_TEXTURE0); // Assuming you use texture unit 0
   glBindTexture(GL_TEXTURE_2D, atlasID);
+}
+
+/**
+ * Adds sprite from source atlas to destination atlas
+ */
+void add_sprite_to_atlas(const std::string& atlasName, const std::string& sourceAtlasName, Sprite sprite, int x, int y)
+{
+  // @TODO FIX_SPRITE_ADD
+  /*int width, height, channels;
+  char* spriteData = (char*)stbi_load(textureAtlases[sourceAtlasName].second, &width, &height, &channels, 4);
+
+  if (!spriteData)
+  {
+    SM_ASSERT(false, "Failed to load texture");
+  }
+  else
+  {
+    GLuint atlasID = textureAtlases[atlasName].first;
+    glBindTexture(GL_TEXTURE_2D, atlasID);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, sprite.atlasOffset.x, sprite.atlasOffset.y, sprite.size.x, sprite.size.y, GL_RGBA, GL_UNSIGNED_BYTE, spriteData);
+    stbi_image_free(spriteData);
+  }*/
 }
 
 bool gl_init(BumpAllocator* transientStorage)
@@ -282,9 +307,9 @@ bool gl_init(BumpAllocator* transientStorage)
 
   // Texture Loading using STBI.
   // The last atlas in this list will be activated upon start
-  textureAtlases["enemies"] = load_texture_with_stbi(ENEMIES_MASTER_TEXTURE_PATH);
-  textureAtlases["projectiles"] = load_texture_with_stbi(PROJECTILES_MASTER_TEXTURE_PATH);
-  textureAtlases["master"] = load_texture_with_stbi(MASTER_TEXTURE_PATH);
+  textureAtlases["enemies"] = std::pair<GLuint, const char*>(load_texture_with_stbi(ENEMIES_TEXTURE_PATH), ENEMIES_TEXTURE_PATH);
+  textureAtlases["projectiles"] = std::pair<GLuint, const char*>(load_texture_with_stbi(PROJECTILES_TEXTURE_PATH), PROJECTILES_TEXTURE_PATH);
+  textureAtlases["master"] = std::pair<GLuint, const char*>(load_texture_with_stbi(MASTER_TEXTURE_PATH), MASTER_TEXTURE_PATH);
 
   // Load Font
   {
