@@ -9,11 +9,16 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <map>
+#include <string>
+
 
 // #############################################################################
 //                           OpenGL Constants
 // #############################################################################
-const char* TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS.png";
+const char* MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS.png";
+const char* PROJECTILES_MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_PROJECTILES.png";
+const char* ENEMIES_MASTER_TEXTURE_PATH = "assets/textures/TEXTURE_ATLAS_ENEMIES.png";
 
 
 // #############################################################################
@@ -37,6 +42,7 @@ struct GLContext
 //                           OpenGL Globals
 // #############################################################################
 static GLContext glContext;
+std::map<std::string, GLuint> textureAtlases;
 
 // #############################################################################
 //                           OpenGL Functions
@@ -181,6 +187,46 @@ void load_font(char* filePath, int fontSize)
   }
 }
 
+GLuint load_texture_with_stbi(const char* texturePath)
+{
+  int width, height, channels;
+  char* data = (char*)stbi_load(texturePath, &width, &height, &channels, 4);
+  if(!data)
+  {
+    SM_ASSERT(false, "Failed to load texture");
+  }
+  else
+  {
+    glGenTextures(1, &glContext.textureID);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, glContext.textureID);
+
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    // This setting only matters when using the GLSL texture() function
+    // When you use texelFetch() this setting has no effect,
+    // because texelFetch is designed for this purpose
+    // See: https://interactiveimmersive.io/blog/glsl/glsl-data-tricks/
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 
+                  0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glContext.textureTimestamp = get_timestamp(texturePath);
+  }
+
+  stbi_image_free(data);
+
+  return glContext.textureID;
+}
+
+void switch_texture_atlas(const std::string& atlasName)
+{
+  GLuint atlasID = textureAtlases[atlasName];
+  glActiveTexture(GL_TEXTURE0); // Assuming you use texture unit 0
+  glBindTexture(GL_TEXTURE_2D, atlasID);
+}
 
 bool gl_init(BumpAllocator* transientStorage)
 {
@@ -234,36 +280,11 @@ bool gl_init(BumpAllocator* transientStorage)
   glGenVertexArrays(1, &VAO);
   glBindVertexArray(VAO);
 
-  // Texture Loading using STBI
-  {
-    int width, height, channels;
-    char* data = (char*)stbi_load(TEXTURE_PATH, &width, &height, &channels, 4);
-    if(!data)
-    {
-      SM_ASSERT(false, "Failed to load texture");
-      return false;
-    }
-
-    glGenTextures(1, &glContext.textureID);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, glContext.textureID);
-
-    // set the texture wrapping/filtering options (on the currently bound texture object)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    // This setting only matters when using the GLSL texture() function
-    // When you use texelFetch() this setting has no effect,
-    // because texelFetch is designed for this purpose
-    // See: https://interactiveimmersive.io/blog/glsl/glsl-data-tricks/
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glContext.textureTimestamp = get_timestamp(TEXTURE_PATH);
-
-    stbi_image_free(data);
-  }
+  // Texture Loading using STBI.
+  // The last atlas in this list will be activated upon start
+  textureAtlases["enemies"] = load_texture_with_stbi(ENEMIES_MASTER_TEXTURE_PATH);
+  textureAtlases["projectiles"] = load_texture_with_stbi(PROJECTILES_MASTER_TEXTURE_PATH);
+  textureAtlases["master"] = load_texture_with_stbi(MASTER_TEXTURE_PATH);
 
   // Load Font
   {
@@ -313,13 +334,13 @@ void gl_render(BumpAllocator* transientStorage)
 {
   // Texture Hot Reloading
   {
-    long long currentTimestamp = get_timestamp(TEXTURE_PATH);
+    long long currentTimestamp = get_timestamp(MASTER_TEXTURE_PATH);
 
     if(currentTimestamp > glContext.textureTimestamp)
     {    
       glActiveTexture(GL_TEXTURE0);
       int width, height, nChannels;
-      char* data = (char*)stbi_load(TEXTURE_PATH, &width, &height, &nChannels, 4);
+      char* data = (char*)stbi_load(MASTER_TEXTURE_PATH, &width, &height, &nChannels, 4);
       if(data)
       {
         glContext.textureTimestamp = currentTimestamp;

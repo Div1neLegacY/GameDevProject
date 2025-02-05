@@ -6,6 +6,9 @@
 #include "render_interface.h"
 #include "ui.h"
 
+#include <string>
+#include <functional>  // To use std::function
+
 // #############################################################################
 //                           Game Globals
 // #############################################################################
@@ -28,7 +31,7 @@ enum GameInputType
   MOVE_RIGHT,
   MOVE_UP,
   MOVE_DOWN,
-  JUMP,
+  ATTACK,
 
   MOUSE_LEFT,
   MOUSE_RIGHT,
@@ -53,7 +56,6 @@ enum PlayerAnimState
 {
   PLAYER_ANIM_IDLE,
   PLAYER_ANIM_RUN,
-  PLAYER_ANIM_JUMP,
 
   PLAYER_ANIM_COUNT
 };
@@ -115,6 +117,9 @@ struct GameState
 // #############################################################################
 static GameState* gameState;
 
+// Callbacks
+std::function<void(const std::string&)> switchAtlasCallback;
+
 // #############################################################################
 //                           Game Functions (Exposed)
 // #############################################################################
@@ -126,6 +131,8 @@ extern "C"
                              SoundState* soundStateIn,
                              UIState* uiStateIn,
                              float dt);
+
+  EXPORT_FN void game_init(std::function<void(const std::string&)> callback);
 }
 
 /**

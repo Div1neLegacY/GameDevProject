@@ -15,7 +15,7 @@ enum SpriteID
   SPRITE_DICE,
   SPRITE_CELESTE,
   SPRITE_CELESTE_RUN,
-  SPRITE_CELESTE_JUMP,
+  SPRITE_CELESTE_ATTACK,
   // Sprite Solids
   SPRITE_SOLID_01,
   SPRITE_SOLID_02,
@@ -24,6 +24,8 @@ enum SpriteID
   SPRITE_BUTTON_SAVE,
   // Tiles
   SPRITE_TILE_GRASS_01,
+  // Projectiles
+  SPRITE_BASIC_PROJECTILE,
   // Count of sprite assets
   SPRITE_COUNT
 };
@@ -74,7 +76,7 @@ Sprite get_sprite(SpriteID spriteID)
       break;
     }
 
-    case SPRITE_CELESTE_JUMP:
+    case SPRITE_CELESTE_ATTACK:
     {
       sprite.atlasOffset = {229, 0};
       sprite.size = {17, 20};
@@ -114,6 +116,13 @@ Sprite get_sprite(SpriteID spriteID)
       sprite.atlasOffset = {112, 32};
       sprite.size = {95, 95};
       break;
+    }
+
+    // Atlas "projectiles"
+    case SPRITE_BASIC_PROJECTILE:
+    {
+      sprite.atlasOffset = {0, 0};
+      sprite.size = {16, 16};
     }
   }
 

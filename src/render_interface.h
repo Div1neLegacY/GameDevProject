@@ -125,7 +125,7 @@ int get_material_idx(Material material = {})
     if(renderData->materials[materialIdx] == material)
     {
       return materialIdx;
-    }
+    } 
   }
 
   return renderData->materials.add(material);

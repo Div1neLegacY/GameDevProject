@@ -39,6 +39,10 @@ const char* gameLoadLibName = "game_load.so";
 typedef decltype(update_game) update_game_type;
 static update_game_type* update_game_ptr;
 
+// This is the function pointer to game_init in game.cpp
+typedef decltype(game_init) game_init_type;
+static game_init_type* game_init_ptr;
+
 // #############################################################################
 //                           Cross Platform functions
 // #############################################################################
@@ -47,6 +51,13 @@ static update_game_type* update_game_ptr;
 double get_delta_time();
 void reload_game_dll(BumpAllocator* transientStorage);
 
+// #############################################################################
+//                           main Callbacks
+// #############################################################################
+// Used to allow game source to trigger main methods
+void switch_atlas_callback(const std::string& atlasName) {
+    switch_texture_atlas(atlasName);
+}
 
 int main()
 {
@@ -109,11 +120,18 @@ int main()
 
   gl_init(&transientStorage);
 
+  bool initialize_game = true;
   while(running)
   {
     float dt = get_delta_time();
 
     reload_game_dll(&transientStorage);
+
+    if (initialize_game)
+    {
+      game_init(switch_atlas_callback);
+      initialize_game = false;
+    }
 
     // Update
     platform_update_window();
@@ -139,6 +157,11 @@ void update_game(GameState* gameStateIn,
   update_game_ptr(gameStateIn ,renderDataIn, inputIn, soundStateIn, uiStateIn, dt);
 }
 
+void game_init(std::function<void(const std::string&)> callback)
+{
+  game_init_ptr(callback);
+}
+
 double get_delta_time()
 {
   // Only executed once when entering the function (static)
@@ -151,7 +174,6 @@ double get_delta_time()
 
   return delta;
 }
-
 
 void reload_game_dll(BumpAllocator* transientStorage)
 {
@@ -180,6 +202,10 @@ void reload_game_dll(BumpAllocator* transientStorage)
 
     update_game_ptr = (update_game_type*)platform_load_dynamic_function(gameDLL, "update_game");
     SM_ASSERT(update_game_ptr, "Failed to load update_game function");
+    lastEditTimestampGameDLL = currentTimestampGameDLL;
+
+    game_init_ptr = (game_init_type*)platform_load_dynamic_function(gameDLL, "game_init");
+    SM_ASSERT(game_init_ptr, "Failed to load game_init function");
     lastEditTimestampGameDLL = currentTimestampGameDLL;
   }
 }

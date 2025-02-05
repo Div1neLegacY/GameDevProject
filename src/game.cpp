@@ -135,7 +135,7 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
   constexpr float flyReduce = 12.0f;    
   constexpr float gravity = 13.0f;
   constexpr float fallSpeed = 3.6f;
-  constexpr float jumpSpeed = -3.0f;
+  constexpr float attackSpeed = -3.0f;
 
   // Facing the Player in the right direction
   if(player.speed.x > 0)
@@ -147,20 +147,23 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
     player.renderOptions = RENDER_OPTION_FLIP_X;
   }
 
-  // Jump
-  if(just_pressed(JUMP) && grounded)
+  // Attack
+  if(just_pressed(ATTACK) && grounded)
   {
-    player.speed.y = jumpSpeed;
-    player.speed.x += player.solidSpeed.x;
-    player.speed.y += player.solidSpeed.y;
-    play_sound("jump");
-    grounded = false;
+    switchAtlasCallback("projectiles");
+
+    draw_sprite(SPRITE_BASIC_PROJECTILE, player.pos, {.layer = get_layer(LAYER_GAME, 2)});
+
+    // Switch back to master atlas
+    //switchAtlasCallback("master");
+    //player.speed.y = jumpSpeed;
+    //player.speed.x += player.solidSpeed.x;
+    //player.speed.y += player.solidSpeed.y;
+    //play_sound("jump");
+    //grounded = false;
   }
 
-  if(!grounded)
-  {
-    player.animationState = PLAYER_ANIM_JUMP;
-  }
+
 
   if(is_down(MOVE_LEFT))
   {
@@ -1088,7 +1091,6 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     {
       Player& player = gameState->player;
       player.animationSprites[PLAYER_ANIM_IDLE] = SPRITE_CELESTE;
-      player.animationSprites[PLAYER_ANIM_JUMP] = SPRITE_CELESTE_JUMP;
       player.animationSprites[PLAYER_ANIM_RUN] = SPRITE_CELESTE_RUN;
     }
 
@@ -1104,7 +1106,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       gameState->keyMappings[MOVE_RIGHT].keys.add(KEY_RIGHT);
       //gameState->keyMappings[MOUSE_LEFT].keys.add(KEY_MOUSE_LEFT);
       //gameState->keyMappings[MOUSE_RIGHT].keys.add(KEY_MOUSE_RIGHT);
-      gameState->keyMappings[JUMP].keys.add(KEY_SPACE);
+      gameState->keyMappings[ATTACK].keys.add(KEY_SPACE);
       gameState->keyMappings[PAUSE].keys.add(KEY_ESCAPE);
     }
 
@@ -1212,4 +1214,10 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                   .layer = get_layer(LAYER_GAME, 2)
                 });
   }
+}
+
+EXPORT_FN void game_init(std::function<void(const std::string&)> callback)
+{
+  // Initialize necessary projectiles into game
+  switchAtlasCallback = callback;
 }
