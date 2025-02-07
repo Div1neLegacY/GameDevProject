@@ -150,7 +150,7 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
   // Attack
   if(just_pressed(ATTACK) && grounded)
   {
-    switchAtlasCallback("projectiles");
+    //switchAtlasCallback("projectiles");
 
     draw_sprite(SPRITE_BASIC_PROJECTILE, player.pos, {.layer = get_layer(LAYER_GAME, 2)});
 
@@ -163,8 +163,7 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
     //grounded = false;
   }
 
-
-
+  bool activeXMovement = false, activeYMovement = false;
   if(is_down(MOVE_LEFT))
   {
     if(grounded)
@@ -179,9 +178,9 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
     }
     player.runAnimTime += dt;
     player.speed.x = approach(player.speed.x, -runSpeed, runAcceleration * mult * dt);
+    activeXMovement = true;
   }
-
-  if(is_down(MOVE_RIGHT))
+  else if(is_down(MOVE_RIGHT))
   {
     if(grounded)
     {
@@ -195,6 +194,7 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
     }
     player.runAnimTime += dt;
     player.speed.x = approach(player.speed.x, runSpeed, runAcceleration * mult * dt);
+    activeXMovement = true;
   }
 
   if(is_down(MOVE_UP))
@@ -211,9 +211,9 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
     }
     player.runAnimTime += dt;
     player.speed.y = approach(player.speed.y, -runSpeed, runAcceleration * mult * dt);
+    activeYMovement = true;
   }
-
-  if(is_down(MOVE_DOWN))
+  else if(is_down(MOVE_DOWN))
   {
     if(grounded)
     {
@@ -227,6 +227,22 @@ void static update_player(float dt, bool enabledFriction, bool enabledGravity, b
     }
     player.runAnimTime += dt;
     player.speed.y = approach(player.speed.y, runSpeed, runAcceleration * mult * dt);
+    activeYMovement = true;
+  }
+
+  // If we have both x and y movements, normalize the speed so we don't go faster when combining the movements
+  if (activeXMovement && activeYMovement)
+  {
+    float* x = &player.speed.x;
+    float* y = &player.speed.y;
+    float magnitude = std::sqrt((*x) * (*x) + (*y) * (*y));
+
+    // Avoid division by zero
+    if (magnitude > 0.0f)
+    {
+      (*x) = ((*x) / magnitude) * runSpeed;
+      (*y) = ((*y) / magnitude) * runSpeed;
+    }
   }
 
   // Friction
@@ -913,15 +929,16 @@ void static update_solids(float dt)
   }
 }
 
-void static update_enemies(float dt)
+void static update_projectiles(float dt)
 {
-  if (gameState->state == GAME_STATE_IN_LEVEL_1)
+  /*Player& player = gameState->player;
+  player.solidSpeed = {};
+
+  for(int projectileIdx = 0; projectileIdx < gameState->projectiles.count; projectileIdx++)
   {
-    for (int i = 0; i < gameState->enemiesLevel1.count; i++)
-    {
-      gameState->enemiesLevel1[i].keyframes[0] = gameState->player.pos;
-    }
-  }
+    Solid& projectile = gameState->projectiles[projectileIdx];
+    projectile.pos.x += 1;
+  }*/
 }
 
 void update_level(float dt)
@@ -1131,6 +1148,16 @@ EXPORT_FN void update_game(GameState* gameStateIn,
       gameState->solidsLevel1.add(solid);
     }
 
+    // Projectiles
+    /*{
+      Solid projectile = {};
+      projectile.spriteID = SPRITE_BASIC_PROJECTILE;
+      projectile.pos = {8 * 2, 8 * 10};
+      projectile.speed.x = 20.0f;
+      projectile.speed.y = 20.0f;
+      gameState->projectiles.add(projectile);
+    }*/
+
     gameState->initialized = true;
   }
 
@@ -1190,7 +1217,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     }
   }
 
-  // Draw Solids
+  // Draw solids
   {
     for(int solidIdx = 0; solidIdx < gameState->solidsLevel1.count; solidIdx++)
     {
@@ -1200,11 +1227,11 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     }
   }
 
-  // Draw Player
+  // Draw player
   {
     Player& player = gameState->player;
     IVec2 playerPos = lerp(player.prevPos, player.pos, interpolatedDT);
-    
+
     Sprite sprite = get_sprite(player.animationSprites[player.animationState]);
     int animationIdx = animate(&player.runAnimTime, sprite.frameCount, 0.6f);
     draw_sprite(player.animationSprites[player.animationState], playerPos, 
@@ -1213,6 +1240,12 @@ EXPORT_FN void update_game(GameState* gameStateIn,
                   .renderOptions = player.renderOptions,
                   .layer = get_layer(LAYER_GAME, 2)
                 });
+  }
+
+  // Draw projectiles
+  {
+    /*Player& player = gameState->player;
+    draw_sprite(SPRITE_BASIC_PROJECTILE, player.pos, {.layer = get_layer(LAYER_GAME, 2)});*/
   }
 }
 

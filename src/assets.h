@@ -121,8 +121,8 @@ Sprite get_sprite(SpriteID spriteID)
     // Atlas "projectiles"
     case SPRITE_BASIC_PROJECTILE:
     {
-      sprite.atlasOffset = {0, 0};
-      sprite.size = {16, 16};
+      sprite.atlasOffset = {35, 35};
+      sprite.size = {10, 10};
     }
   }
 

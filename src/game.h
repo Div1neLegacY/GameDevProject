@@ -14,8 +14,10 @@
 // #############################################################################
 constexpr int UPDATES_PER_SECOND = 60;
 constexpr double UPDATE_DELAY = 1.0 / UPDATES_PER_SECOND;
+// Trying to keep dimensions at a common value for all resolutions
+// 640 x 360
 constexpr int WORLD_WIDTH = 640;
-constexpr int WORLD_HEIGHT = 320;
+constexpr int WORLD_HEIGHT = 360;
 constexpr int TILESIZE = 95;
 constexpr int NUM_OF_TILE_ROWS = 7;
 constexpr int NUM_OF_TILE_COLUMNS = 9;
@@ -107,6 +109,8 @@ struct GameState
   // Level 2 Solids
   Array<Solid, 20> solidsLevel2;
   
+  Array<Solid, 5> projectiles;
+
   Array<IVec2, 21> tileCoords;
   Tile worldGrid[WORLD_GRID.x][WORLD_GRID.y];
   KeyMapping keyMappings[GAME_INPUT_COUNT];
@@ -146,3 +150,5 @@ void static update_solids_level_1(float dt);
 void static update_solids_level_2(float dt);
 
 void static update_solids(float dt);
+
+void static update_projectiles(float dt);
