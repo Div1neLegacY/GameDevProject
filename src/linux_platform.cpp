@@ -1,4 +1,3 @@
-// THESE ARE NOT NEEDED, VSCODE IS DOOOOOOOOOOGGGG SHIT
 #include "input.h"
 #include "platform.h"
 
